@@ -62,7 +62,7 @@ This section captures the ongoing debates regarding the system's design. As deve
 ### ⚖️ Debate #4: Project Layout & Module Architecture
 * **Status**: 🏁 Resolved
 * **Decision**: **Option A (Standard Go Layout with Reusable `/pkg` & YAML Frontmatter Debates)**
-* **Rationale**: Adopted the standard Go project structure with a reusable public `/pkg` to allow other Go repositories to import the scheduler library, keeping internal details protected in `/internal`. Configured Markdown debates to use structured YAML Frontmatter to guarantee highly reliable, programmatic indexing of design decisions and edge relationships.
+* **Rationale**: Adopted the standard Go project structure with a reusable public `/pkg` to allow other Go repositories to import the scheduler library, keeping internal details protected in `/internal`. Configured Markdown debates to use structured YAML Frontmatter to guarantee highly reliable, programmatic indexing of design decisions and edge relationships. To make the project extremely flexible, we decoupled the parsing machinery into its own dedicated public package: `pkg/parser`. This allows other Go codebases to import the AST/Markdown parser as a standalone library without needing the scheduling or watcher runtimes.
 
 ### ⚖️ Debate #5: Ingestion Engine & Parser Scope (Phase 2 Start)
 * **Status**: 🏁 Resolved
@@ -70,6 +70,15 @@ This section captures the ongoing debates regarding the system's design. As deve
 * **Rationale**: 
   - **Aspect 1**: We will merge FS watcher interrupts (`fsnotify`) and wall-clock tickers into a unified non-blocking `chan IngestTrigger` channel pipeline in Go. Highly performant, race-free, and flexible.
   - **Aspect 2**: Target exclusively Go AST files and YAML-frontmattered markdown files for V1. This avoids complex Cgo dependencies, provides total structural precision, and ensures the library is lightweight and clean to import into other Go repositories.
+
+### ⚖️ Debate #6: Database & API Architecture (Phase 3 Start)
+* **Status**: 🏁 Resolved
+* **Decision**: 
+  - **SQLite Driver**: `modernc.org/sqlite` (pure Go, Cgo-free).
+  - **Surrogate Keys**: UUIDv7 via `github.com/google/uuid` (lexicographically sortable for time-sliced queries).
+  - **Migrations**: Formal migrations library for long-term schema safety.
+  - **API Strategy**: RESTful HTTP + JSON API backed by a decoupled `GraphService` interface to easily plug in gRPC later.
+* **Rationale**: Approved by the user. Pure Go SQLite keeps cross-compilation flawless. UUIDv7 provides monotonically increasing IDs, preventing index fragmentation and enabling temporal queries. The Service Interface pattern separates the core query engine from transport layers, allowing REST/JSON today and seamless gRPC integration tomorrow.
 
 ---
 
@@ -79,10 +88,10 @@ This section captures the ongoing debates regarding the system's design. As deve
 - [x] **Phase 1: Knowledge Seed & Design**
   - [x] Establish the `GEMINI.md` bootstrap memory file.
   - [x] Agree on debate formats and file/folder structures.
-- [ ] **Phase 2: The Ingestion Engine (Backend CLI) (Current)**
-  - [ ] Implement local watcher / scheduler.
-  - [ ] Write the parser for markdown debates and basic JS/TS AST parsing.
-- [ ] **Phase 3: Database & API**
+- [x] **Phase 2: The Ingestion Engine (Backend CLI)**
+  - [x] Implement local watcher / scheduler.
+  - [x] Write the parser for markdown debates and basic Go AST parsing.
+- [ ] **Phase 3: Database & API (Current)**
   - [ ] Define the graph storage schema.
   - [ ] Create simple local query API.
 - [ ] **Phase 4: Stunning Visualizer Dashboard**

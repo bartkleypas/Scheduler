@@ -3,7 +3,10 @@ package engine
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
+
+	"scheduler/pkg/parser"
 )
 
 // TriggerType defines what initiated the ingestion run.
@@ -95,11 +98,6 @@ func (s *Scheduler) runWallClock(ctx context.Context) {
 	}
 }
 
-func (s *Scheduler) runWatcher(ctx context.Context) {
-	// Stub: Will utilize fsnotify in Phase 2 implementation.
-	fmt.Printf("[Watcher] Watching workspace: %s\n", s.config.WorkspacePath)
-}
-
 func (s *Scheduler) runEventLoop(ctx context.Context) {
 	fmt.Println("[Scheduler] Unified loop started...")
 	for {
@@ -114,6 +112,78 @@ func (s *Scheduler) runEventLoop(ctx context.Context) {
 }
 
 func (s *Scheduler) ingest(t IngestTrigger) {
-	fmt.Printf("[Ingestor] Ingest triggered by %s at %s\n", t.Type, t.Timestamp.Format(time.Kitchen))
-	// Stub: Phase 2 will execute the AST & Debate parser and persist to SQLite here.
+	fmt.Printf("\n[Ingestor] Ingest triggered by %s at %s\n", t.Type, t.Timestamp.Format("15:04:05"))
+
+	if t.Type == TriggerFileChanged {
+		// Incremental, surgical single-file parse
+		fmt.Printf("[Ingestor] Incremental scan of file: %s\n", t.Path)
+		ext := filepath.Ext(t.Path)
+
+		var singleGraph *parser.Graph
+		var err error
+
+		switch ext {
+		case ".go":
+			singleGraph, err = parser.ParseGoSource(t.Path, s.config.WorkspacePath)
+		case ".md":
+			singleGraph, err = parser.ParseMarkdownDebate(t.Path, s.config.WorkspacePath)
+		default:
+			fmt.Printf("[Ingestor] Skip: unsupported file extension for %s\n", t.Path)
+			return
+		}
+
+		if err != nil {
+			fmt.Printf("[Ingestor Error] Failed to parse file: %v\n", err)
+			return
+		}
+
+		fmt.Printf("Parsed 1 file. Discovered %d nodes and %d edges:\n", len(singleGraph.Nodes), len(singleGraph.Edges))
+		for id, node := range singleGraph.Nodes {
+			fmt.Printf("  • Node [%s]: %s (properties: %v)\n", node.Type, id, node.Properties)
+		}
+		for _, edge := range singleGraph.Edges {
+			fmt.Printf("  → Edge: (%s) -[%s]-> (%s)\n", edge.From, edge.Type, edge.To)
+		}
+		return
+	}
+
+	// Full workspace scan
+	fmt.Println("[Ingestor] Starting full workspace scan...")
+	workspaceFiles, err := WalkWorkspace(s.config.WorkspacePath)
+	if err != nil {
+		fmt.Printf("[Ingestor Error] Failed to walk workspace: %v\n", err)
+		return
+	}
+
+	fullGraph := parser.NewGraph()
+
+	// Parse all Go files
+	for _, goFile := range workspaceFiles.GoFiles {
+		g, err := parser.ParseGoSource(goFile, s.config.WorkspacePath)
+		if err != nil {
+			fmt.Printf("[Ingestor Warning] Failed to parse Go file %s: %v\n", goFile, err)
+			continue
+		}
+		fullGraph.Merge(g)
+	}
+
+	// Parse all Markdown files
+	for _, mdFile := range workspaceFiles.MarkdownFiles {
+		g, err := parser.ParseMarkdownDebate(mdFile, s.config.WorkspacePath)
+		if err != nil {
+			fmt.Printf("[Ingestor Warning] Failed to parse Markdown file %s: %v\n", mdFile, err)
+			continue
+		}
+		fullGraph.Merge(g)
+	}
+
+	fmt.Printf("[Ingestor] Ingest complete! Discovered %d total nodes and %d total edges.\n", len(fullGraph.Nodes), len(fullGraph.Edges))
+	fmt.Println("--- EXTRACTED KNOWLEDGE GRAPH SNAPSHOT ---")
+	for id, node := range fullGraph.Nodes {
+		fmt.Printf("  • Node [%s]: %s\n", node.Type, id)
+	}
+	for _, edge := range fullGraph.Edges {
+		fmt.Printf("  → Edge: (%s) -[%s]-> (%s)\n", edge.From, edge.Type, edge.To)
+	}
+	fmt.Println("------------------------------------------")
 }
