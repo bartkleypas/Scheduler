@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"scheduler/internal/storage"
+	"scheduler/pkg/api"
 	"scheduler/pkg/engine"
 )
 
@@ -56,10 +57,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize and launch the HTTP API Server
+	apiServer := api.NewServer(scheduler, service, 8080)
+	go func() {
+		if err := apiServer.Start(); err != nil {
+			fmt.Printf("❌ API Server failed to start: %v\n", err)
+		}
+	}()
+
 	// Trigger an initial manual sync to index the workspace
 	scheduler.SyncNow()
 
 	// Run until context is cancelled by shutdown signal
 	<-ctx.Done()
+	
+	// Graceful shutdown of the API Server
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer shutdownCancel()
+	if err := apiServer.Shutdown(shutdownCtx); err != nil {
+		fmt.Printf("❌ API Server graceful shutdown failed: %v\n", err)
+	}
+
 	fmt.Println("👋 Scheduler exited successfully.")
 }

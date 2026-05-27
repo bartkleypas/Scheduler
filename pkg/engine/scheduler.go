@@ -179,6 +179,14 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 	}
 
 	fmt.Printf("[Ingestor] Ingest complete! Discovered %d total nodes and %d total edges.\n", len(fullGraph.Nodes), len(fullGraph.Edges))
+	
+	fmt.Println("[Ingestor] Saving full workspace graph to storage...")
+	if err := s.service.SaveGraph(context.Background(), fullGraph); err != nil {
+		fmt.Printf("[Ingestor Error] Failed to save full workspace graph: %v\n", err)
+		return
+	}
+	fmt.Println("[Ingestor] Successfully saved full workspace graph.")
+
 	fmt.Println("--- EXTRACTED KNOWLEDGE GRAPH SNAPSHOT ---")
 	for id, node := range fullGraph.Nodes {
 		fmt.Printf("  • Node [%s]: %s\n", node.Type, id)

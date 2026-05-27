@@ -67,7 +67,8 @@ targets:
 		EnableWatcher: false, // Disable watcher
 	}
 
-	scheduler := NewScheduler(cfg)
+	mockSvc := &mockGraphService{}
+	scheduler := NewScheduler(cfg, mockSvc)
 
 	// Capture trigger channel in testing context to verify it works
 	ctx, cancel := context.WithCancel(context.Background())
@@ -145,4 +146,22 @@ targets:
 	
 	// Wait a tiny bit for the goroutines to digest the manual sync trigger
 	time.Sleep(50 * time.Millisecond)
+}
+
+type mockGraphService struct{}
+
+func (m *mockGraphService) SaveGraph(ctx context.Context, g *parser.Graph) error {
+	return nil
+}
+
+func (m *mockGraphService) GetGraph(ctx context.Context) (*parser.Graph, error) {
+	return nil, nil
+}
+
+func (m *mockGraphService) DeleteNode(ctx context.Context, id string) error {
+	return nil
+}
+
+func (m *mockGraphService) Close() error {
+	return nil
 }

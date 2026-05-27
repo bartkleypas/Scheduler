@@ -57,18 +57,46 @@ func (s *SQLiteGraphService) SaveGraph(ctx context.Context, g *parser.Graph) err
 
 // GetGraph retrieves the current state of the graph from storage.
 func (s *SQLiteGraphService) GetGraph(ctx context.Context) (*parser.Graph, error) {
-	// Note: In a real production system, we might want pagination or filtering.
-	// For the scheduler knowledge graph, we currently return the full set for the D3 visualization.
-	
-	// This is a simplified implementation of retrieval.
-	// We'll need to add helper methods to SQLiteStore to fetch all nodes and edges.
-	return nil, fmt.Errorf("GetGraph not yet implemented in SQLiteGraphService")
+	nodes, err := s.store.GetNodes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nodes: %w", err)
+	}
+
+	edges, err := s.store.GetEdges(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get edges: %w", err)
+	}
+
+	g := parser.NewGraph()
+
+	for _, rawNode := range nodes {
+		var properties map[string]interface{}
+		if len(rawNode.Properties) > 0 {
+			if err := json.Unmarshal(rawNode.Properties, &properties); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal properties for node %s: %w", rawNode.ID, err)
+			}
+		}
+		g.AddNode(parser.Node{
+			ID:         rawNode.ID,
+			Type:       rawNode.Type,
+			Properties: properties,
+		})
+	}
+
+	for _, rawEdge := range edges {
+		g.Edges = append(g.Edges, parser.Edge{
+			From: rawEdge.From,
+			To:   rawEdge.To,
+			Type: rawEdge.Type,
+		})
+	}
+
+	return g, nil
 }
 
 // DeleteNode removes a node and its cascading edges.
 func (s *SQLiteGraphService) DeleteNode(ctx context.Context, id string) error {
-	// We can add this to SQLiteStore later.
-	return fmt.Errorf("DeleteNode not yet implemented in SQLiteGraphService")
+	return s.store.DeleteNode(ctx, id)
 }
 
 // Close closes the database connection.

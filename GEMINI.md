@@ -91,9 +91,10 @@ This section captures the ongoing debates regarding the system's design. As deve
 - [x] **Phase 2: The Ingestion Engine (Backend CLI)**
   - [x] Implement local watcher / scheduler.
   - [x] Write the parser for markdown debates and basic Go AST parsing.
-- [ ] **Phase 3: Database & API (Current)**
-  - [ ] Define the graph storage schema.
-  - [ ] Create simple local query API.
+- [x] **Phase 3: Database & API**
+  - [x] Define the graph storage schema.
+  - [x] Implement database persistence for full workspace scans.
+  - [x] Create simple local query REST API.
 - [ ] **Phase 4: Stunning Visualizer Dashboard**
   - [ ] Build the interactive network graph interface.
   - [ ] Design the glassmorphic controls and live ingest logs.
