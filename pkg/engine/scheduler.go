@@ -36,18 +36,20 @@ type Config struct {
 
 // Scheduler orchestrates the ingestion loop, coalescing interrupts and ticks.
 type Scheduler struct {
-	config Config
+	config   Config
+	service  GraphService
 	triggers chan IngestTrigger
 	cancel   context.CancelFunc
 }
 
 // NewScheduler instantiates a new workspace indexing scheduler.
-func NewScheduler(cfg Config) *Scheduler {
+func NewScheduler(cfg Config, service GraphService) *Scheduler {
 	if cfg.WatchDebounce == 0 {
 		cfg.WatchDebounce = 500 * time.Millisecond
 	}
 	return &Scheduler{
 		config:   cfg,
+		service:  service,
 		triggers: make(chan IngestTrigger, 100),
 	}
 }
@@ -137,13 +139,12 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 			return
 		}
 
-		fmt.Printf("Parsed 1 file. Discovered %d nodes and %d edges:\n", len(singleGraph.Nodes), len(singleGraph.Edges))
-		for id, node := range singleGraph.Nodes {
-			fmt.Printf("  • Node [%s]: %s (properties: %v)\n", node.Type, id, node.Properties)
+		fmt.Printf("Parsed 1 file. Saving to graph storage...\n")
+		if err := s.service.SaveGraph(context.Background(), singleGraph); err != nil {
+			fmt.Printf("[Ingestor Error] Failed to save graph: %v\n", err)
+			return
 		}
-		for _, edge := range singleGraph.Edges {
-			fmt.Printf("  → Edge: (%s) -[%s]-> (%s)\n", edge.From, edge.Type, edge.To)
-		}
+		fmt.Println("[Ingestor] Successfully saved incremental update.")
 		return
 	}
 

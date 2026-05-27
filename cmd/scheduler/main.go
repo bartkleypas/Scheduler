@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"scheduler/internal/storage"
 	"scheduler/pkg/engine"
 )
 
@@ -24,7 +25,18 @@ func main() {
 		EnableWatcher: true,            // Enable reactive FS watcher
 	}
 
-	scheduler := engine.NewScheduler(cfg)
+	// Initialize Storage
+	store, err := storage.NewSQLiteStore(cfg.DBPath)
+	if err != nil {
+		fmt.Printf("❌ Failed to initialize storage: %v\n", err)
+		os.Exit(1)
+	}
+	defer store.Close()
+
+	// Initialize the Graph Service
+	service := storage.NewSQLiteGraphService(store)
+
+	scheduler := engine.NewScheduler(cfg, service)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
