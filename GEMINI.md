@@ -80,6 +80,11 @@ This section captures the ongoing debates regarding the system's design. As deve
   - **API Strategy**: RESTful HTTP + JSON API backed by a decoupled `GraphService` interface to easily plug in gRPC later.
 * **Rationale**: Approved by the user. Pure Go SQLite keeps cross-compilation flawless. UUIDv7 provides monotonically increasing IDs, preventing index fragmentation and enabling temporal queries. The Service Interface pattern separates the core query engine from transport layers, allowing REST/JSON today and seamless gRPC integration tomorrow.
 
+### ⚖️ Debate #7: Interactive Circular Visualizer & Asset Serving (Phase 4 Start)
+* **Status**: 🏁 Resolved (Aborted / Rolled Back)
+* **Decision**: **Rollback React Visualizer in favor of 100% Pure Go REST API Purity (ADR #009)**
+* **Rationale**: Although the D3 polar-projected visualizer, details side drawer, and live watcher logs HUD were successfully engineered and ran beautifully, we determined that introducing a massive Node.js/NPM platform dependency footprint was a "bridge too far." Grafting a heavy, non-deterministic web ecosystem diluted the core identity of our **Scheduler** project—which is designed to serve as an ultra-lightweight, high-performance systems-level background engine. To protect compilation speeds, global caches, and zero-dependency purity, we performed a clean, proactive deletion of all javascript/visualizer code. The project remains a pure, modular, importable Go package that exposes a lightweight JSON REST API contract for external decoupled observers.
+
 ---
 
 
@@ -95,9 +100,10 @@ This section captures the ongoing debates regarding the system's design. As deve
   - [x] Define the graph storage schema.
   - [x] Implement database persistence for full workspace scans.
   - [x] Create simple local query REST API.
-- [ ] **Phase 4: Stunning Visualizer Dashboard**
-  - [ ] Build the interactive network graph interface.
-  - [ ] Design the glassmorphic controls and live ingest logs.
+- [x] **Phase 4: Stunning Visualizer Dashboard (Aborted & Rolled Back for Purity)**
+  - [x] Prototyped full React & D3 radial tidy tree dashboard with HUD overlays.
+  - [x] Evaluated and rolled back the entire web/ Vite code footprint.
+  - [x] Restored high-performance, 100% native Go API-only serving.
 
 ---
 
