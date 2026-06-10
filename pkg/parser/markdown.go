@@ -52,6 +52,10 @@ func ParseMarkdownDebate(absPath string, rootPath string) (*Graph, error) {
 		markdownBodyLines = append(markdownBodyLines, line)
 	}
 
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
 	// Parse YAML key-values
 	properties := make(map[string]interface{})
 	var targets []string
