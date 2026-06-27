@@ -106,3 +106,9 @@ The history of scheduling shows a clear evolutionary path:
 > **Scheduling is not a product of the computer age; it is a mathematical and operational response to resource constraints.** 
 
 When early computer engineers at MIT, DuPont, and Bell Labs were tasked with managing the CPU—the most expensive resource of its time—they naturally looked to the physical systems that had successfully managed telegraph cables, railway tracks, telephone trunk lines, and factory floors for decades.
+
+---
+
+## 🔗 Related Research
+* For an analysis of how scheduling principles apply to distributed systems and compilation pipelines, see [Distributed Build Systems & Dependency Graph Scheduling](file:///Users/Bart/Code/Scheduler/research/distributed_build_scheduling.md).
+
