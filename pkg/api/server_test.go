@@ -1,47 +1,16 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"scheduler/internal/testutil"
 	"scheduler/pkg/engine"
 	"scheduler/pkg/parser"
 )
-
-type mockGraphService struct {
-	graph       *parser.Graph
-	deleteID    string
-	deleteCount int
-	saveCount   int
-}
-
-func (m *mockGraphService) SaveGraph(ctx context.Context, g *parser.Graph) error {
-	m.saveCount++
-	m.graph = g
-	return nil
-}
-
-func (m *mockGraphService) GetGraph(ctx context.Context) (*parser.Graph, error) {
-	return m.graph, nil
-}
-
-func (m *mockGraphService) DeleteNode(ctx context.Context, id string) error {
-	m.deleteID = id
-	m.deleteCount++
-	return nil
-}
-
-func (m *mockGraphService) DeleteFileGraph(ctx context.Context, relPath string) error {
-	return nil
-}
-
-func (m *mockGraphService) Close() error {
-	return nil
-}
 
 func TestGetGraph(t *testing.T) {
 	g := parser.NewGraph()
@@ -51,7 +20,8 @@ func TestGetGraph(t *testing.T) {
 		Properties: map[string]interface{}{"filepath": "test.go"},
 	})
 
-	mockSvc := &mockGraphService{graph: g}
+	mockSvc := testutil.NewMockGraphService()
+	mockSvc.Graph = g
 	cfg := engine.Config{
 		WorkspacePath: ".",
 		ScanInterval:  0,
@@ -85,7 +55,7 @@ func TestGetGraph(t *testing.T) {
 }
 
 func TestTriggerIngest(t *testing.T) {
-	mockSvc := &mockGraphService{}
+	mockSvc := testutil.NewMockGraphService()
 	cfg := engine.Config{
 		WorkspacePath: ".",
 		ScanInterval:  0,
@@ -111,7 +81,7 @@ func TestTriggerIngest(t *testing.T) {
 }
 
 func TestDeleteNode(t *testing.T) {
-	mockSvc := &mockGraphService{}
+	mockSvc := testutil.NewMockGraphService()
 	cfg := engine.Config{
 		WorkspacePath: ".",
 		ScanInterval:  0,
@@ -138,12 +108,12 @@ func TestDeleteNode(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if mockSvc.deleteCount != 1 {
-		t.Errorf("expected delete count 1; got %d", mockSvc.deleteCount)
+	if len(mockSvc.DeleteCalls) != 1 {
+		t.Errorf("expected delete count 1; got %d", len(mockSvc.DeleteCalls))
 	}
 
-	if mockSvc.deleteID != "node-to-delete" {
-		t.Errorf("expected delete ID 'node-to-delete'; got %s", mockSvc.deleteID)
+	if mockSvc.DeleteCalls[0] != "node-to-delete" {
+		t.Errorf("expected delete ID 'node-to-delete'; got %s", mockSvc.DeleteCalls[0])
 	}
 
 	expected := `{"status":"node node-to-delete successfully deleted"}`
@@ -154,7 +124,7 @@ func TestDeleteNode(t *testing.T) {
 }
 
 func TestOptionsPreflight(t *testing.T) {
-	mockSvc := &mockGraphService{}
+	mockSvc := testutil.NewMockGraphService()
 	cfg := engine.Config{
 		WorkspacePath: ".",
 		ScanInterval:  0,

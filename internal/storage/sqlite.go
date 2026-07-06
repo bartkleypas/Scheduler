@@ -101,6 +101,16 @@ func (s *SQLiteStore) migrate() error {
 				CREATE INDEX IF NOT EXISTS idx_edges_to ON edges("to");
 			`,
 		},
+		{
+			version: 3,
+			query: `
+				CREATE TABLE IF NOT EXISTS file_hashes (
+					filepath TEXT PRIMARY KEY,
+					hash TEXT NOT NULL,
+					last_scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+				);
+			`,
+		},
 	}
 
 	// 3. Apply migrations sequentially
@@ -238,6 +248,32 @@ func (s *SQLiteStore) DeleteFileGraph(ctx context.Context, relPath string) error
 	}
 
 	return tx.Commit()
+}
+
+// GetFileHash retrieves the cached hash for a file.
+func (s *SQLiteStore) GetFileHash(ctx context.Context, filepath string) (string, error) {
+	query := `SELECT hash FROM file_hashes WHERE filepath = ?`
+	var hash string
+	err := s.db.QueryRowContext(ctx, query, filepath).Scan(&hash)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return hash, err
+}
+
+// SetFileHash inserts or updates the cached hash for a file.
+func (s *SQLiteStore) SetFileHash(ctx context.Context, filepath, hash string) error {
+	query := `INSERT INTO file_hashes (filepath, hash, last_scanned_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+	          ON CONFLICT(filepath) DO UPDATE SET hash=excluded.hash, last_scanned_at=excluded.last_scanned_at`
+	_, err := s.db.ExecContext(ctx, query, filepath, hash)
+	return err
+}
+
+// DeleteFileHash deletes the cached hash for a file.
+func (s *SQLiteStore) DeleteFileHash(ctx context.Context, filepath string) error {
+	query := `DELETE FROM file_hashes WHERE filepath = ?`
+	_, err := s.db.ExecContext(ctx, query, filepath)
+	return err
 }
 
 // Close closes the database connection.

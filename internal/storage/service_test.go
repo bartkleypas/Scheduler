@@ -140,3 +140,71 @@ func TestSQLiteGraphService_DeleteNode(t *testing.T) {
 		t.Errorf("expected 0 edges remaining, got %d", len(retrieved.Edges))
 	}
 }
+
+func TestSQLiteGraphService_FileHashing(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "test.db")
+
+	store, err := NewSQLiteStore(dbPath)
+	if err != nil {
+		t.Fatalf("failed to create store: %v", err)
+	}
+	defer store.Close()
+
+	service := NewSQLiteGraphService(store)
+	ctx := context.Background()
+
+	// 1. Get non-existent hash (should return empty string, no error)
+	hash, err := service.GetFileHash(ctx, "nonexistent.go")
+	if err != nil {
+		t.Fatalf("GetFileHash failed: %v", err)
+	}
+	if hash != "" {
+		t.Errorf("expected empty hash, got %q", hash)
+	}
+
+	// 2. Set hash
+	err = service.SetFileHash(ctx, "app.go", "hash123")
+	if err != nil {
+		t.Fatalf("SetFileHash failed: %v", err)
+	}
+
+	// 3. Get hash and verify
+	hash, err = service.GetFileHash(ctx, "app.go")
+	if err != nil {
+		t.Fatalf("GetFileHash failed: %v", err)
+	}
+	if hash != "hash123" {
+		t.Errorf("expected hash123, got %q", hash)
+	}
+
+	// 4. Update hash
+	err = service.SetFileHash(ctx, "app.go", "hash456")
+	if err != nil {
+		t.Fatalf("SetFileHash update failed: %v", err)
+	}
+
+	// Verify updated
+	hash, err = service.GetFileHash(ctx, "app.go")
+	if err != nil {
+		t.Fatalf("GetFileHash failed: %v", err)
+	}
+	if hash != "hash456" {
+		t.Errorf("expected hash456, got %q", hash)
+	}
+
+	// 5. Delete hash
+	err = service.DeleteFileHash(ctx, "app.go")
+	if err != nil {
+		t.Fatalf("DeleteFileHash failed: %v", err)
+	}
+
+	// Verify deleted
+	hash, err = service.GetFileHash(ctx, "app.go")
+	if err != nil {
+		t.Fatalf("GetFileHash failed: %v", err)
+	}
+	if hash != "" {
+		t.Errorf("expected empty hash after delete, got %q", hash)
+	}
+}

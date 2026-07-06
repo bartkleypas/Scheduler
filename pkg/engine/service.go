@@ -19,6 +19,15 @@ type GraphService interface {
 
 	// DeleteFileGraph removes a File node and all nodes defined in it.
 	DeleteFileGraph(ctx context.Context, relPath string) error
+
+	// GetFileHash retrieves the cached hash for a file.
+	GetFileHash(ctx context.Context, relPath string) (string, error)
+
+	// SetFileHash inserts or updates the cached hash for a file.
+	SetFileHash(ctx context.Context, relPath, hash string) error
+
+	// DeleteFileHash deletes the cached hash for a file.
+	DeleteFileHash(ctx context.Context, relPath string) error
 	
 	// Close closes the underlying storage connection.
 	Close() error

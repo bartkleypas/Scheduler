@@ -4,60 +4,17 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
-	"scheduler/pkg/parser"
+	"scheduler/internal/testutil"
 )
 
-// mockGraphServiceSpy is a spy to check what calls were made to the GraphService interface.
-type mockGraphServiceSpy struct {
-	mu           sync.Mutex
-	saveCalls    []*parser.Graph
-	deleteCalls  []string
-	closeCalled  bool
-	getGraphFunc func() (*parser.Graph, error)
-}
 
-func (m *mockGraphServiceSpy) SaveGraph(ctx context.Context, g *parser.Graph) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.saveCalls = append(m.saveCalls, g)
-	return nil
-}
-
-func (m *mockGraphServiceSpy) GetGraph(ctx context.Context) (*parser.Graph, error) {
-	if m.getGraphFunc != nil {
-		return m.getGraphFunc()
-	}
-	return nil, nil
-}
-
-func (m *mockGraphServiceSpy) DeleteNode(ctx context.Context, id string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.deleteCalls = append(m.deleteCalls, id)
-	return nil
-}
-
-func (m *mockGraphServiceSpy) DeleteFileGraph(ctx context.Context, relPath string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.deleteCalls = append(m.deleteCalls, relPath)
-	return nil
-}
-
-func (m *mockGraphServiceSpy) Close() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.closeCalled = true
-	return nil
-}
 
 func TestNewSchedulerDefaults(t *testing.T) {
 	cfg := Config{}
-	s := NewScheduler(cfg, &mockGraphServiceSpy{})
+	s := NewScheduler(cfg, testutil.NewMockGraphService())
 	if s.config.WatchDebounce != 500*time.Millisecond {
 		t.Errorf("expected default WatchDebounce to be 500ms, got %s", s.config.WatchDebounce)
 	}
@@ -67,7 +24,7 @@ func TestScheduler_WallClockTicker(t *testing.T) {
 	cfg := Config{
 		ScanInterval: 10 * time.Millisecond,
 	}
-	s := NewScheduler(cfg, &mockGraphServiceSpy{})
+	s := NewScheduler(cfg, testutil.NewMockGraphService())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -91,7 +48,7 @@ func TestScheduler_IngestUnsupportedFile(t *testing.T) {
 		WorkspacePath: tempWorkspace,
 	}
 
-	spy := &mockGraphServiceSpy{}
+	spy := testutil.NewMockGraphService()
 	s := NewScheduler(cfg, spy)
 
 	// Trigger ingest for a txt file (unsupported extension)
@@ -101,10 +58,8 @@ func TestScheduler_IngestUnsupportedFile(t *testing.T) {
 	})
 
 	// SaveGraph should not have been called because the extension is unsupported
-	spy.mu.Lock()
-	defer spy.mu.Unlock()
-	if len(spy.saveCalls) != 0 {
-		t.Errorf("expected SaveGraph not to be called, but got %d calls", len(spy.saveCalls))
+	if len(spy.SaveCalls) != 0 {
+		t.Errorf("expected SaveGraph not to be called, but got %d calls", len(spy.SaveCalls))
 	}
 }
 
@@ -123,7 +78,7 @@ func TestScheduler_IngestIncremental(t *testing.T) {
 		WorkspacePath: tempWorkspace,
 	}
 
-	spy := &mockGraphServiceSpy{}
+	spy := testutil.NewMockGraphService()
 	s := NewScheduler(cfg, spy)
 
 	// Trigger ingest for the Go file
@@ -132,13 +87,11 @@ func TestScheduler_IngestIncremental(t *testing.T) {
 		Path: goFile,
 	})
 
-	spy.mu.Lock()
-	defer spy.mu.Unlock()
-	if len(spy.saveCalls) != 1 {
-		t.Fatalf("expected SaveGraph to be called once, got %d calls", len(spy.saveCalls))
+	if len(spy.SaveCalls) != 1 {
+		t.Fatalf("expected SaveGraph to be called once, got %d calls", len(spy.SaveCalls))
 	}
 
-	g := spy.saveCalls[0]
+	g := spy.SaveCalls[0]
 	// Verify that the graph contains elements from the Go file
 	if _, ok := g.Nodes["main.main"]; !ok {
 		t.Error("expected Go symbol node main.main not found in incremental ingest graph")
@@ -160,7 +113,7 @@ func TestScheduler_IngestFullScan(t *testing.T) {
 		WorkspacePath: tempWorkspace,
 	}
 
-	spy := &mockGraphServiceSpy{}
+	spy := testutil.NewMockGraphService()
 	s := NewScheduler(cfg, spy)
 
 	// Trigger full scan
@@ -168,13 +121,11 @@ func TestScheduler_IngestFullScan(t *testing.T) {
 		Type: TriggerPeriodicScan,
 	})
 
-	spy.mu.Lock()
-	defer spy.mu.Unlock()
-	if len(spy.saveCalls) != 1 {
-		t.Fatalf("expected SaveGraph to be called once, got %d calls", len(spy.saveCalls))
+	if len(spy.SaveCalls) != 1 {
+		t.Fatalf("expected SaveGraph to be called once, got %d calls", len(spy.SaveCalls))
 	}
 
-	g := spy.saveCalls[0]
+	g := spy.SaveCalls[0]
 	if _, ok := g.Nodes["main.main"]; !ok {
 		t.Error("expected Go symbol node main.main in full scan graph")
 	}

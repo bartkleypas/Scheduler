@@ -104,6 +104,21 @@ func (s *SQLiteGraphService) DeleteFileGraph(ctx context.Context, relPath string
 	return s.store.DeleteFileGraph(ctx, relPath)
 }
 
+// GetFileHash retrieves the cached hash for a file.
+func (s *SQLiteGraphService) GetFileHash(ctx context.Context, relPath string) (string, error) {
+	return s.store.GetFileHash(ctx, relPath)
+}
+
+// SetFileHash inserts or updates the cached hash for a file.
+func (s *SQLiteGraphService) SetFileHash(ctx context.Context, relPath, hash string) error {
+	return s.store.SetFileHash(ctx, relPath, hash)
+}
+
+// DeleteFileHash deletes the cached hash for a file.
+func (s *SQLiteGraphService) DeleteFileHash(ctx context.Context, relPath string) error {
+	return s.store.DeleteFileHash(ctx, relPath)
+}
+
 // Close closes the database connection.
 func (s *SQLiteGraphService) Close() error {
 	return s.store.Close()

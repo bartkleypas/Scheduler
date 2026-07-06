@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"scheduler/internal/testutil"
 )
 
 func TestIsDir(t *testing.T) {
@@ -44,7 +46,7 @@ func TestWatcher_BasicFileChanged(t *testing.T) {
 	}
 
 	// Create scheduler with a dummy service
-	s := NewScheduler(cfg, &mockGraphService{})
+	s := NewScheduler(cfg, testutil.NewMockGraphService())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -88,7 +90,7 @@ func TestWatcher_DynamicSubdirectory(t *testing.T) {
 		WatchDebounce: 50 * time.Millisecond,
 	}
 
-	s := NewScheduler(cfg, &mockGraphService{})
+	s := NewScheduler(cfg, testutil.NewMockGraphService())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
