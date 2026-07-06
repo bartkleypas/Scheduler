@@ -16,6 +16,9 @@ type GraphService interface {
 	
 	// DeleteNode removes a node and its associated edges.
 	DeleteNode(ctx context.Context, id string) error
+
+	// DeleteFileGraph removes a File node and all nodes defined in it.
+	DeleteFileGraph(ctx context.Context, relPath string) error
 	
 	// Close closes the underlying storage connection.
 	Close() error

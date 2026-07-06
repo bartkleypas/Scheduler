@@ -217,6 +217,29 @@ func (s *SQLiteStore) DeleteNode(ctx context.Context, id string) error {
 	return nil
 }
 
+// DeleteFileGraph deletes a File node and all nodes defined in it in a single transaction.
+func (s *SQLiteStore) DeleteFileGraph(ctx context.Context, relPath string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Delete all nodes that are defined in the file
+	queryNodes := `DELETE FROM nodes WHERE id IN (SELECT "from" FROM edges WHERE "to" = ? AND type = 'DEFINED_IN')`
+	if _, err := tx.ExecContext(ctx, queryNodes, relPath); err != nil {
+		return fmt.Errorf("failed to delete nodes defined in %s: %w", relPath, err)
+	}
+
+	// Delete the File node itself
+	queryFile := `DELETE FROM nodes WHERE id = ?`
+	if _, err := tx.ExecContext(ctx, queryFile, relPath); err != nil {
+		return fmt.Errorf("failed to delete file node %s: %w", relPath, err)
+	}
+
+	return tx.Commit()
+}
+
 // Close closes the database connection.
 func (s *SQLiteStore) Close() error {
 	return s.db.Close()

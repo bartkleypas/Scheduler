@@ -35,6 +35,10 @@ func (m *mockGraphService) DeleteNode(ctx context.Context, id string) error {
 	return nil
 }
 
+func (m *mockGraphService) DeleteFileGraph(ctx context.Context, relPath string) error {
+	return nil
+}
+
 func (m *mockGraphService) Close() error {
 	return nil
 }

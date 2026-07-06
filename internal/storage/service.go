@@ -99,6 +99,11 @@ func (s *SQLiteGraphService) DeleteNode(ctx context.Context, id string) error {
 	return s.store.DeleteNode(ctx, id)
 }
 
+// DeleteFileGraph removes a File node and all nodes defined in it.
+func (s *SQLiteGraphService) DeleteFileGraph(ctx context.Context, relPath string) error {
+	return s.store.DeleteFileGraph(ctx, relPath)
+}
+
 // Close closes the database connection.
 func (s *SQLiteGraphService) Close() error {
 	return s.store.Close()

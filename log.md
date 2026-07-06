@@ -6,3 +6,9 @@ All updates and modifications to this knowledge bundle are tracked chronological
 
 *   **Initialized OKF Bundle**: Created the project-level [index.md](file:///Users/Bart/Code/Scheduler/index.md), [log.md](file:///Users/Bart/Code/Scheduler/log.md), and [graph_schema.md](file:///Users/Bart/Code/Scheduler/graph_schema.md).
 *   **Structured Decisions Index**: Added [decisions/index.md](file:///Users/Bart/Code/Scheduler/decisions/index.md) to index all existing Architecture Decision Records.
+
+## 2026-07-06
+
+*   **Optimized Ingestion Performance**: Increased default periodic scan interval to 10 minutes to reduce database noise, and implemented in-memory `ModTime` caching to skip parsing unchanged files.
+*   **Added Stale Node and Edge Garbage Collection**: Implemented transactional graph pruning of deleted or renamed files, symbols, debates, decisions, and tasks.
+

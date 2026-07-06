@@ -41,6 +41,13 @@ func (m *mockGraphServiceSpy) DeleteNode(ctx context.Context, id string) error {
 	return nil
 }
 
+func (m *mockGraphServiceSpy) DeleteFileGraph(ctx context.Context, relPath string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.deleteCalls = append(m.deleteCalls, relPath)
+	return nil
+}
+
 func (m *mockGraphServiceSpy) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

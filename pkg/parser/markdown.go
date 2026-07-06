@@ -224,6 +224,9 @@ func ParseMarkdownDebate(absPath string, rootPath string) (*Graph, error) {
 
 			// Link task to the debate: (Task) -[RESOLVES]-> (Debate)
 			g.AddEdge(taskID, debateID, "RESOLVES")
+
+			// Link task to the file: (Task) -[DEFINED_IN]-> (File)
+			g.AddEdge(taskID, relPath, "DEFINED_IN")
 		}
 	}
 

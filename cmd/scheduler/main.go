@@ -22,8 +22,8 @@ func main() {
 	cfg := engine.Config{
 		WorkspacePath: ".",
 		DBPath:        ".knowledge/graph.db",
-		ScanInterval:  5 * time.Second, // Scan every 5 seconds for demonstration
-		EnableWatcher: true,            // Enable reactive FS watcher
+		ScanInterval:  10 * time.Minute, // Background full scan fallback (fsnotify watcher handles real-time updates)
+		EnableWatcher: true,             // Enable reactive FS watcher
 	}
 
 	// Initialize Storage

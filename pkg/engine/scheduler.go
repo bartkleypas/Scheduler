@@ -3,7 +3,9 @@ package engine
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"scheduler/pkg/parser"
@@ -36,10 +38,12 @@ type Config struct {
 
 // Scheduler orchestrates the ingestion loop, coalescing interrupts and ticks.
 type Scheduler struct {
-	config   Config
-	service  GraphService
-	triggers chan IngestTrigger
-	cancel   context.CancelFunc
+	config       Config
+	service      GraphService
+	triggers     chan IngestTrigger
+	cancel       context.CancelFunc
+	lastModTimes map[string]time.Time
+	lastModMu    sync.RWMutex
 }
 
 // NewScheduler instantiates a new workspace indexing scheduler.
@@ -48,9 +52,10 @@ func NewScheduler(cfg Config, service GraphService) *Scheduler {
 		cfg.WatchDebounce = 500 * time.Millisecond
 	}
 	return &Scheduler{
-		config:   cfg,
-		service:  service,
-		triggers: make(chan IngestTrigger, 100),
+		config:       cfg,
+		service:      service,
+		triggers:     make(chan IngestTrigger, 100),
+		lastModTimes: make(map[string]time.Time),
 	}
 }
 
@@ -117,20 +122,49 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 	fmt.Printf("\n[Ingestor] Ingest triggered by %s at %s\n", t.Type, t.Timestamp.Format("15:04:05"))
 
 	if t.Type == TriggerFileChanged {
-		// Incremental, surgical single-file parse
-		fmt.Printf("[Ingestor] Incremental scan of file: %s\n", t.Path)
-		ext := filepath.Ext(t.Path)
+		absPath := t.Path
+		relPath, err := filepath.Rel(s.config.WorkspacePath, absPath)
+		if err != nil {
+			relPath = filepath.Base(absPath)
+		}
+		relPath = filepath.ToSlash(relPath)
+
+		info, err := os.Stat(absPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// File was deleted or renamed, clean up its subgraph
+				fmt.Printf("[Ingestor] File deleted, cleaning database graph: %s\n", relPath)
+				if err := s.service.DeleteFileGraph(context.Background(), relPath); err != nil {
+					fmt.Printf("[Ingestor Error] Failed to delete file graph: %v\n", err)
+				}
+				s.lastModMu.Lock()
+				delete(s.lastModTimes, relPath)
+				s.lastModMu.Unlock()
+			}
+			return
+		}
+
+		s.lastModMu.RLock()
+		lastMod, ok := s.lastModTimes[relPath]
+		s.lastModMu.RUnlock()
+
+		if ok && !info.ModTime().After(lastMod) {
+			// Unchanged, skip!
+			return
+		}
+
+		fmt.Printf("[Ingestor] Incremental scan of file: %s\n", relPath)
+		ext := filepath.Ext(absPath)
 
 		var singleGraph *parser.Graph
-		var err error
 
 		switch ext {
 		case ".go":
-			singleGraph, err = parser.ParseGoSource(t.Path, s.config.WorkspacePath)
+			singleGraph, err = parser.ParseGoSource(absPath, s.config.WorkspacePath)
 		case ".md":
-			singleGraph, err = parser.ParseMarkdownDebate(t.Path, s.config.WorkspacePath)
+			singleGraph, err = parser.ParseMarkdownDebate(absPath, s.config.WorkspacePath)
 		default:
-			fmt.Printf("[Ingestor] Skip: unsupported file extension for %s\n", t.Path)
+			fmt.Printf("[Ingestor] Skip: unsupported file extension for %s\n", relPath)
 			return
 		}
 
@@ -139,11 +173,20 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 			return
 		}
 
-		fmt.Printf("Parsed 1 file. Saving to graph storage...\n")
+		// Transactional clean-and-save to ensure old symbols are pruned
+		if err := s.service.DeleteFileGraph(context.Background(), relPath); err != nil {
+			fmt.Printf("[Ingestor Warning] Failed to clean old file graph: %v\n", err)
+		}
+
+		fmt.Printf("Parsed modified file. Saving to graph storage...\n")
 		if err := s.service.SaveGraph(context.Background(), singleGraph); err != nil {
 			fmt.Printf("[Ingestor Error] Failed to save graph: %v\n", err)
 			return
 		}
+
+		s.lastModMu.Lock()
+		s.lastModTimes[relPath] = info.ModTime()
+		s.lastModMu.Unlock()
 		fmt.Println("[Ingestor] Successfully saved incremental update.")
 		return
 	}
@@ -156,43 +199,132 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 		return
 	}
 
-	fullGraph := parser.NewGraph()
+	// Map of files currently present in workspace
+	activeFiles := make(map[string]bool)
+	for _, f := range workspaceFiles.GoFiles {
+		rel, _ := filepath.Rel(s.config.WorkspacePath, f)
+		activeFiles[filepath.ToSlash(rel)] = true
+	}
+	for _, f := range workspaceFiles.MarkdownFiles {
+		rel, _ := filepath.Rel(s.config.WorkspacePath, f)
+		activeFiles[filepath.ToSlash(rel)] = true
+	}
 
-	// Parse all Go files
+	// 1. Prune Deleted Files from Database
+	currentGraph, err := s.service.GetGraph(context.Background())
+	if err == nil && currentGraph != nil {
+		for _, node := range currentGraph.Nodes {
+			if node.Type == "File" {
+				if !activeFiles[node.ID] {
+					fmt.Printf("[Ingestor] Pruning deleted file from database: %s\n", node.ID)
+					if err := s.service.DeleteFileGraph(context.Background(), node.ID); err != nil {
+						fmt.Printf("[Ingestor Error] Failed to delete file graph: %v\n", err)
+					}
+					s.lastModMu.Lock()
+					delete(s.lastModTimes, node.ID)
+					s.lastModMu.Unlock()
+				}
+			}
+		}
+	}
+
+	// 2. Parse and Save Go Files if changed
 	for _, goFile := range workspaceFiles.GoFiles {
+		rel, _ := filepath.Rel(s.config.WorkspacePath, goFile)
+		relPath := filepath.ToSlash(rel)
+
+		info, err := os.Stat(goFile)
+		if err != nil {
+			continue
+		}
+
+		s.lastModMu.RLock()
+		lastMod, ok := s.lastModTimes[relPath]
+		s.lastModMu.RUnlock()
+
+		if ok && !info.ModTime().After(lastMod) {
+			continue
+		}
+
+		fmt.Printf("[Ingestor] Scanning modified file: %s\n", relPath)
 		g, err := parser.ParseGoSource(goFile, s.config.WorkspacePath)
 		if err != nil {
 			fmt.Printf("[Ingestor Warning] Failed to parse Go file %s: %v\n", goFile, err)
 			continue
 		}
-		fullGraph.Merge(g)
+
+		// Transactional clean-and-save
+		if err := s.service.DeleteFileGraph(context.Background(), relPath); err != nil {
+			fmt.Printf("[Ingestor Warning] Failed to clean old file graph for %s: %v\n", relPath, err)
+		}
+		if err := s.service.SaveGraph(context.Background(), g); err != nil {
+			fmt.Printf("[Ingestor Warning] Failed to save graph for %s: %v\n", relPath, err)
+			continue
+		}
+
+		s.lastModMu.Lock()
+		s.lastModTimes[relPath] = info.ModTime()
+		s.lastModMu.Unlock()
 	}
 
-	// Parse all Markdown files
+	// 3. Parse and Save Markdown Files if changed
 	for _, mdFile := range workspaceFiles.MarkdownFiles {
+		rel, _ := filepath.Rel(s.config.WorkspacePath, mdFile)
+		relPath := filepath.ToSlash(rel)
+
+		info, err := os.Stat(mdFile)
+		if err != nil {
+			continue
+		}
+
+		s.lastModMu.RLock()
+		lastMod, ok := s.lastModTimes[relPath]
+		s.lastModMu.RUnlock()
+
+		if ok && !info.ModTime().After(lastMod) {
+			continue
+		}
+
+		fmt.Printf("[Ingestor] Scanning modified file: %s\n", relPath)
 		g, err := parser.ParseMarkdownDebate(mdFile, s.config.WorkspacePath)
 		if err != nil {
 			fmt.Printf("[Ingestor Warning] Failed to parse Markdown file %s: %v\n", mdFile, err)
 			continue
 		}
-		fullGraph.Merge(g)
+
+		// Transactional clean-and-save
+		if err := s.service.DeleteFileGraph(context.Background(), relPath); err != nil {
+			fmt.Printf("[Ingestor Warning] Failed to clean old file graph for %s: %v\n", relPath, err)
+		}
+		if err := s.service.SaveGraph(context.Background(), g); err != nil {
+			fmt.Printf("[Ingestor Warning] Failed to save graph for %s: %v\n", relPath, err)
+			continue
+		}
+
+		s.lastModMu.Lock()
+		s.lastModTimes[relPath] = info.ModTime()
+		s.lastModMu.Unlock()
 	}
 
-	fmt.Printf("[Ingestor] Ingest complete! Discovered %d total nodes and %d total edges.\n", len(fullGraph.Nodes), len(fullGraph.Edges))
-	
-	fmt.Println("[Ingestor] Saving full workspace graph to storage...")
-	if err := s.service.SaveGraph(context.Background(), fullGraph); err != nil {
-		fmt.Printf("[Ingestor Error] Failed to save full workspace graph: %v\n", err)
+	// Get updated complete graph from SQLite for snapshot reporting
+	updatedGraph, err := s.service.GetGraph(context.Background())
+	if err != nil {
+		fmt.Printf("[Ingestor Error] Failed to retrieve updated graph: %v\n", err)
 		return
 	}
-	fmt.Println("[Ingestor] Successfully saved full workspace graph.")
 
-	fmt.Println("--- EXTRACTED KNOWLEDGE GRAPH SNAPSHOT ---")
-	for id, node := range fullGraph.Nodes {
-		fmt.Printf("  • Node [%s]: %s\n", node.Type, id)
+	if updatedGraph != nil {
+		fmt.Printf("[Ingestor] Ingest complete! Database contains %d total nodes and %d total edges.\n", len(updatedGraph.Nodes), len(updatedGraph.Edges))
+
+		fmt.Println("--- EXTRACTED KNOWLEDGE GRAPH SNAPSHOT ---")
+		for id, node := range updatedGraph.Nodes {
+			fmt.Printf("  • Node [%s]: %s\n", node.Type, id)
+		}
+		for _, edge := range updatedGraph.Edges {
+			fmt.Printf("  → Edge: (%s) -[%s]-> (%s)\n", edge.From, edge.Type, edge.To)
+		}
+		fmt.Println("------------------------------------------")
+	} else {
+		fmt.Println("[Ingestor] Ingest complete! Database graph is empty or nil.")
 	}
-	for _, edge := range fullGraph.Edges {
-		fmt.Printf("  → Edge: (%s) -[%s]-> (%s)\n", edge.From, edge.Type, edge.To)
-	}
-	fmt.Println("------------------------------------------")
 }
