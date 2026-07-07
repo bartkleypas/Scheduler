@@ -14,3 +14,9 @@ All updates and modifications to this knowledge bundle are tracked chronological
 *   **Decoupled Parser Architecture**: Extracted Go AST and Markdown parsers behind a clean, generic `Parser` registry interface to isolate file scanners from the ingestion scheduler.
 *   **Refactored Mock Testing**: Unified duplicate test mocks into a centralized `internal/testutil` package, removing test code redundancy.
 
+## 2026-07-07
+
+*   **Reduced Log Verbosity**: Introduced a `Verbose` configuration option to `Config` to suppress high-volume log outputs by default, including the full knowledge graph database snapshot, unsupported file extension warnings, and full workspace scan progress notifications.
+*   **Fixed Absolute path Resolution**: Resolved relative configuration workspace paths (e.g. `"."`) to absolute paths during scheduler instantiation to prevent `filepath.Rel` failures and erroneous database pruning of file nodes.
+
+

@@ -1,9 +1,12 @@
 package engine
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +20,19 @@ func TestNewSchedulerDefaults(t *testing.T) {
 	s := NewScheduler(cfg, testutil.NewMockGraphService())
 	if s.config.WatchDebounce != 500*time.Millisecond {
 		t.Errorf("expected default WatchDebounce to be 500ms, got %s", s.config.WatchDebounce)
+	}
+}
+
+func TestNewScheduler_ResolvesWorkspacePath(t *testing.T) {
+	cfg := Config{
+		WorkspacePath: ".",
+	}
+	s := NewScheduler(cfg, testutil.NewMockGraphService())
+	if s.config.WorkspacePath == "." || s.config.WorkspacePath == "" {
+		t.Errorf("expected WorkspacePath to be resolved to absolute path, got %q", s.config.WorkspacePath)
+	}
+	if !filepath.IsAbs(s.config.WorkspacePath) {
+		t.Errorf("expected resolved WorkspacePath to be absolute path, got %q", s.config.WorkspacePath)
 	}
 }
 
@@ -130,3 +146,78 @@ func TestScheduler_IngestFullScan(t *testing.T) {
 		t.Error("expected Go symbol node main.main in full scan graph")
 	}
 }
+
+func TestScheduler_VerboseLogging(t *testing.T) {
+	tempWorkspace := t.TempDir()
+	goFile := filepath.Join(tempWorkspace, "main.go")
+	goSource := `package main
+	func main() {}`
+	if err := os.WriteFile(goFile, []byte(goSource), 0644); err != nil {
+		t.Fatalf("failed to write mock Go file: %v", err)
+	}
+
+	// Case 1: Non-verbose mode (default)
+	{
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		cfg := Config{
+			WorkspacePath: tempWorkspace,
+			Verbose:       false,
+		}
+		spy := testutil.NewMockGraphService()
+		s := NewScheduler(cfg, spy)
+		s.ingest(IngestTrigger{Type: TriggerPeriodicScan})
+
+		w.Close()
+		os.Stdout = oldStdout
+
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		output := buf.String()
+
+		if strings.Contains(output, "EXTRACTED KNOWLEDGE GRAPH SNAPSHOT") {
+			t.Error("expected output NOT to contain KNOWLEDGE GRAPH SNAPSHOT in non-verbose mode")
+		}
+		if strings.Contains(output, "Starting full workspace scan") {
+			t.Error("expected output NOT to contain Starting full workspace scan in non-verbose mode")
+		}
+		if strings.Contains(output, "Scanning modified file") {
+			t.Error("expected output NOT to contain Scanning modified file in non-verbose mode")
+		}
+	}
+
+	// Case 2: Verbose mode
+	{
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		cfg := Config{
+			WorkspacePath: tempWorkspace,
+			Verbose:       true,
+		}
+		spy := testutil.NewMockGraphService()
+		s := NewScheduler(cfg, spy)
+		s.ingest(IngestTrigger{Type: TriggerPeriodicScan})
+
+		w.Close()
+		os.Stdout = oldStdout
+
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		output := buf.String()
+
+		if !strings.Contains(output, "EXTRACTED KNOWLEDGE GRAPH SNAPSHOT") {
+			t.Error("expected output to contain KNOWLEDGE GRAPH SNAPSHOT in verbose mode")
+		}
+		if !strings.Contains(output, "Starting full workspace scan") {
+			t.Error("expected output to contain Starting full workspace scan in verbose mode")
+		}
+		if !strings.Contains(output, "Scanning modified file") {
+			t.Error("expected output to contain Scanning modified file in verbose mode")
+		}
+	}
+}
+

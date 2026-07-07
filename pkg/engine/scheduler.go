@@ -36,6 +36,7 @@ type Config struct {
 	ScanInterval  time.Duration // Duration for wall-clock interval ticks (0 to disable)
 	EnableWatcher bool          // Enable reactive fsnotify file system watcher
 	WatchDebounce time.Duration // Debounce time for rapid file modifications
+	Verbose       bool          // Enable verbose console logging (e.g. graph snapshots)
 }
 
 // Scheduler orchestrates the ingestion loop, coalescing interrupts and ticks.
@@ -50,6 +51,11 @@ type Scheduler struct {
 func NewScheduler(cfg Config, service GraphService) *Scheduler {
 	if cfg.WatchDebounce == 0 {
 		cfg.WatchDebounce = 500 * time.Millisecond
+	}
+	if cfg.WorkspacePath != "" {
+		if abs, err := filepath.Abs(cfg.WorkspacePath); err == nil {
+			cfg.WorkspacePath = abs
+		}
 	}
 	return &Scheduler{
 		config:   cfg,
@@ -153,7 +159,9 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 			}
 		}
 		if p == nil {
-			fmt.Printf("[Ingestor] Skip: unsupported file extension for %s\n", relPath)
+			if s.config.Verbose {
+				fmt.Printf("[Ingestor] Skip: unsupported file extension for %s\n", relPath)
+			}
 			return
 		}
 
@@ -164,7 +172,9 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 	}
 
 	// Full workspace scan
-	fmt.Println("[Ingestor] Starting full workspace scan...")
+	if s.config.Verbose {
+		fmt.Println("[Ingestor] Starting full workspace scan...")
+	}
 	workspaceFiles, err := WalkWorkspace(s.config.WorkspacePath)
 	if err != nil {
 		fmt.Printf("[Ingestor Error] Failed to walk workspace: %v\n", err)
@@ -230,14 +240,16 @@ func (s *Scheduler) ingest(t IngestTrigger) {
 	if updatedGraph != nil {
 		fmt.Printf("[Ingestor] Ingest complete! Database contains %d total nodes and %d total edges.\n", len(updatedGraph.Nodes), len(updatedGraph.Edges))
 
-		fmt.Println("--- EXTRACTED KNOWLEDGE GRAPH SNAPSHOT ---")
-		for id, node := range updatedGraph.Nodes {
-			fmt.Printf("  • Node [%s]: %s\n", node.Type, id)
+		if s.config.Verbose {
+			fmt.Println("--- EXTRACTED KNOWLEDGE GRAPH SNAPSHOT ---")
+			for id, node := range updatedGraph.Nodes {
+				fmt.Printf("  • Node [%s]: %s\n", node.Type, id)
+			}
+			for _, edge := range updatedGraph.Edges {
+				fmt.Printf("  → Edge: (%s) -[%s]-> (%s)\n", edge.From, edge.Type, edge.To)
+			}
+			fmt.Println("------------------------------------------")
 		}
-		for _, edge := range updatedGraph.Edges {
-			fmt.Printf("  → Edge: (%s) -[%s]-> (%s)\n", edge.From, edge.Type, edge.To)
-		}
-		fmt.Println("------------------------------------------")
 	} else {
 		fmt.Println("[Ingestor] Ingest complete! Database graph is empty or nil.")
 	}
@@ -255,7 +267,9 @@ func (s *Scheduler) processFile(ctx context.Context, absPath, relPath string, p 
 		return nil
 	}
 
-	fmt.Printf("[Ingestor] Scanning modified file: %s\n", relPath)
+	if s.config.Verbose {
+		fmt.Printf("[Ingestor] Scanning modified file: %s\n", relPath)
+	}
 
 	g, err := p.Parse(absPath, s.config.WorkspacePath)
 	if err != nil {
