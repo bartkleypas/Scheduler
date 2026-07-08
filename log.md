@@ -1,11 +1,22 @@
+---
+type: Concept
+title: "Change Log"
+description: "All updates and modifications to this knowledge bundle are tracked chronologically below."
+tags:
+  - scheduler
+  - go
+  - log
+timestamp: "2026-07-08T11:03:06-07:00"
+---
+
 # Change Log
 
 All updates and modifications to this knowledge bundle are tracked chronologically below.
 
 ## 2026-07-05
 
-*   **Initialized OKF Bundle**: Created the project-level [index.md](file:///Users/Bart/Code/Scheduler/index.md), [log.md](file:///Users/Bart/Code/Scheduler/log.md), and [graph_schema.md](file:///Users/Bart/Code/Scheduler/graph_schema.md).
-*   **Structured Decisions Index**: Added [decisions/index.md](file:///Users/Bart/Code/Scheduler/decisions/index.md) to index all existing Architecture Decision Records.
+*   **Initialized OKF Bundle**: Created the project-level [index.md](index.md), [log.md](log.md), and [graph_schema.md](graph_schema.md).
+*   **Structured Decisions Index**: Added [decisions/index.md](decisions/index.md) to index all existing Architecture Decision Records.
 
 ## 2026-07-06
 

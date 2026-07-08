@@ -113,3 +113,68 @@ SQLite was chosen as the relational local storage layer for the knowledge graph.
 		t.Error("expected RESOLVES edge connecting Task to Decision was not found")
 	}
 }
+
+func TestParseMarkdownDebate_PathResolution(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "markdown_path_res_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a subproject layout
+	// Workspace root: tempDir
+	// Subproject: tempDir/subproject
+	// Target file: tempDir/subproject/pkg/target.go
+	// Debate file: tempDir/subproject/decisions/debate.md
+	subprojectDir := filepath.Join(tempDir, "subproject")
+	decisionsDir := filepath.Join(subprojectDir, "decisions")
+	pkgDir := filepath.Join(subprojectDir, "pkg")
+	
+	if err := os.MkdirAll(decisionsDir, 0755); err != nil {
+		t.Fatalf("failed to create decisions dir: %v", err)
+	}
+	if err := os.MkdirAll(pkgDir, 0755); err != nil {
+		t.Fatalf("failed to create pkg dir: %v", err)
+	}
+
+	targetFilePath := filepath.Join(pkgDir, "target.go")
+	if err := os.WriteFile(targetFilePath, []byte("package pkg"), 0644); err != nil {
+		t.Fatalf("failed to write target file: %v", err)
+	}
+
+	mockFileContent := `---
+id: path-res-debate
+targets:
+  - pkg/target.go
+---
+# Debate on dynamic path resolution
+`
+	debateFilePath := filepath.Join(decisionsDir, "debate.md")
+	if err := os.WriteFile(debateFilePath, []byte(mockFileContent), 0644); err != nil {
+		t.Fatalf("failed to write debate file: %v", err)
+	}
+
+	graph, err := ParseMarkdownDebate(debateFilePath, tempDir)
+	if err != nil {
+		t.Fatalf("ParseMarkdownDebate failed: %v", err)
+	}
+
+	// Verify that the target was resolved relative to the workspace root tempDir,
+	// which means it should be "subproject/pkg/target.go" instead of just "pkg/target.go".
+	resolvedTargetID := "subproject/pkg/target.go"
+	if _, ok := graph.Nodes[resolvedTargetID]; !ok {
+		t.Errorf("expected resolved target node %q to exist in graph, but it did not", resolvedTargetID)
+	}
+
+	// Verify that the edge exists
+	foundEdge := false
+	for _, edge := range graph.Edges {
+		if edge.From == "path-res-debate" && edge.To == resolvedTargetID && edge.Type == "TARGETS" {
+			foundEdge = true
+			break
+		}
+	}
+	if !foundEdge {
+		t.Errorf("expected TARGETS edge from 'path-res-debate' to %q, but it was not found", resolvedTargetID)
+	}
+}

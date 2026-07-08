@@ -1,3 +1,15 @@
+---
+type: Decision
+title: "Architecture Decision Records (ADRs) Index"
+description: "This index tracks key architectural decisions and technical debates throughout the Scheduler lifecycle."
+tags:
+  - scheduler
+  - go
+  - decision
+  - index
+timestamp: "2026-07-05T12:29:48-07:00"
+---
+
 # Architecture Decision Records (ADRs) Index
 
 This index tracks key architectural decisions and technical debates throughout the Scheduler lifecycle.

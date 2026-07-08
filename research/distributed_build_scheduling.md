@@ -1,3 +1,13 @@
+---
+type: Concept
+title: "Distributed Build Systems & Dependency Graph Scheduling"
+description: "Modern build systems and distributed compilers (such as distcc, icecc, sccache, and Bazel) solve the problem of compiling massive codebases by sche..."
+tags:
+  - scheduler
+  - go
+timestamp: "2026-06-24T17:50:30-07:00"
+---
+
 # Distributed Build Systems & Dependency Graph Scheduling
 
 Modern build systems and distributed compilers (such as `distcc`, `icecc`, `sccache`, and `Bazel`) solve the problem of compiling massive codebases by scheduling tasks across a network of machines. This domain sits at the intersection of graph theory, distributed systems, and queueing theory.

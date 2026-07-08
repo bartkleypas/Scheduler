@@ -176,8 +176,31 @@ func ParseMarkdownDebate(absPath string, rootPath string) (*Graph, error) {
 
 	// Parse Targets
 	for _, target := range targets {
+		// Resolve the target relative to the markdown file's parent directory, walking up to rootPath.
+		resolvedTarget := target
+		markdownDir := filepath.Dir(absPath)
+		currentDir := markdownDir
+
+		for {
+			targetAbsPath := filepath.Join(currentDir, target)
+			if _, err := os.Stat(targetAbsPath); err == nil {
+				// Target exists at this level!
+				// Compute path relative to rootPath
+				if rel, err := filepath.Rel(rootPath, targetAbsPath); err == nil {
+					resolvedTarget = rel
+					break
+				}
+			}
+
+			// If we've reached rootPath or root of system, stop searching
+			if currentDir == rootPath || currentDir == filepath.Dir(currentDir) {
+				break
+			}
+			currentDir = filepath.Dir(currentDir)
+		}
+
 		// Ensure target paths are consistent relative paths
-		cleanTarget := filepath.ToSlash(filepath.Clean(target))
+		cleanTarget := filepath.ToSlash(filepath.Clean(resolvedTarget))
 
 		// Ensure the target File exists in the graph as a node placeholder
 		g.AddNode(Node{

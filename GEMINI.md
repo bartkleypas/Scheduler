@@ -1,3 +1,14 @@
+---
+type: Concept
+title: "Project Scheduler: Workspace Knowledge Graph & Decision Tracker"
+description: "--- **Scheduler** is a local-first system designed to model, build, and maintain a **Knowledge Graph of the active workspace**. It captures not jus..."
+tags:
+  - scheduler
+  - go
+  - bootstrap
+timestamp: "2026-05-30T13:18:07-07:00"
+---
+
 # Project Scheduler: Workspace Knowledge Graph & Decision Tracker
 
 > **Attention Agents / Context Windows:** This file serves as the system "bootstrap" memory and the seed of the local Workspace Knowledge Graph. When you wake up in this workspace, read this file to understand the current state, project intent, ongoing architectural debates, and decision history.

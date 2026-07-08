@@ -1,3 +1,13 @@
+---
+type: Concept
+title: "The Pre-Computing Evolution of Scheduling: From Railroad Sidings to CPU Slices"
+description: "Before silicon, CPUs, and operating systems, human civilization faced the fundamental challenge of **resource scarcity**. Whether allocating transm..."
+tags:
+  - scheduler
+  - go
+timestamp: "2026-07-08T11:03:13-07:00"
+---
+
 # The Pre-Computing Evolution of Scheduling: From Railroad Sidings to CPU Slices
 
 Before silicon, CPUs, and operating systems, human civilization faced the fundamental challenge of **resource scarcity**. Whether allocating transmission lines, factory floor time, or railway tracks, engineers and operational managers invented scheduling mechanisms to optimize throughput, ensure fairness, and minimize latency.
@@ -110,5 +120,5 @@ When early computer engineers at MIT, DuPont, and Bell Labs were tasked with man
 ---
 
 ## 🔗 Related Research
-* For an analysis of how scheduling principles apply to distributed systems and compilation pipelines, see [Distributed Build Systems & Dependency Graph Scheduling](file:///Users/Bart/Code/Scheduler/research/distributed_build_scheduling.md).
+* For an analysis of how scheduling principles apply to distributed systems and compilation pipelines, see [Distributed Build Systems & Dependency Graph Scheduling](distributed_build_scheduling.md).
 
