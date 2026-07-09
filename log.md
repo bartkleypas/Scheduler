@@ -6,7 +6,7 @@ tags:
   - scheduler
   - go
   - log
-timestamp: "2026-07-08T11:03:06-07:00"
+timestamp: "2026-07-08T19:05:00-07:00"
 ---
 
 # Change Log
@@ -30,4 +30,11 @@ All updates and modifications to this knowledge bundle are tracked chronological
 *   **Reduced Log Verbosity**: Introduced a `Verbose` configuration option to `Config` to suppress high-volume log outputs by default, including the full knowledge graph database snapshot, unsupported file extension warnings, and full workspace scan progress notifications.
 *   **Fixed Absolute path Resolution**: Resolved relative configuration workspace paths (e.g. `"."`) to absolute paths during scheduler instantiation to prevent `filepath.Rel` failures and erroneous database pruning of file nodes.
 
+## 2026-07-08
 
+*   **Indexed Research Documents**: Registered research documents in the project knowledge index ([index.md](index.md)), covering [distributed_build_scheduling.md](research/distributed_build_scheduling.md) and [pre_computing_scheduling_evolution.md](research/pre_computing_scheduling_evolution.md).
+
+## 2026-07-09
+
+*   **Created Project README**: Documented the Scheduler architecture, key features, database schema mapping, project layout, CLI setup commands, API routes, and developer orientation in [README.md](README.md).
+*   **Linked README in Knowledge Index**: Registered the new readme document in the project knowledge index ([index.md](index.md)).
