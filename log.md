@@ -6,7 +6,7 @@ tags:
   - scheduler
   - go
   - log
-timestamp: "2026-07-08T19:05:00-07:00"
+timestamp: "2026-07-09T14:30:00-07:00"
 ---
 
 # Change Log
@@ -38,3 +38,4 @@ All updates and modifications to this knowledge bundle are tracked chronological
 
 *   **Created Project README**: Documented the Scheduler architecture, key features, database schema mapping, project layout, CLI setup commands, API routes, and developer orientation in [README.md](README.md).
 *   **Linked README in Knowledge Index**: Registered the new readme document in the project knowledge index ([index.md](index.md)).
+*   **Streamlined Agent Bootstrap Memory**: Refactored [GEMINI.md](GEMINI.md) into a thin orientation anchor, deleting redundant schemas and resolved debates, and converting it to a link-based hub pointing to authoritative source files.
