@@ -39,3 +39,13 @@ All updates and modifications to this knowledge bundle are tracked chronological
 *   **Created Project README**: Documented the Scheduler architecture, key features, database schema mapping, project layout, CLI setup commands, API routes, and developer orientation in [README.md](README.md).
 *   **Linked README in Knowledge Index**: Registered the new readme document in the project knowledge index ([index.md](index.md)).
 *   **Streamlined Agent Bootstrap Memory**: Refactored [GEMINI.md](GEMINI.md) into a thin orientation anchor, deleting redundant schemas and resolved debates, and converting it to a link-based hub pointing to authoritative source files.
+
+## 2026-11-02
+
+*   **Developed and Standardized Research Essays**: Formatted and developed five concept documents in `research/` into full, presentable essays adhering to OKF frontmatter standards, complete with historical parallels, system diagrams, and architectural insights:
+    *   [the_megaphone_and_the_whisper.md](research/the_megaphone_and_the_whisper.md): Delineated metadata isolation to protect user intent from IDE telemetry noise.
+    *   [cybernetic_order.md](research/cybernetic_order.md): First-order cybernetics and the Identity-Perception-Expression sequence.
+    *   [compressing_intent.md](research/compressing_intent.md): Decompression tokens from cave art to knowledge graphs and the failure of shared ground states.
+    *   [pushing_boundries.md](research/pushing_boundries.md): Computational thermodynamics, 97°C phase transitions, and runtime pressure vessels.
+    *   [survival_calculus.md](research/survival_calculus.md): Continuum of feedback control loops, FFTs, Turing state evaluation, and LLM oscillators.
+*   **Updated Knowledge Index**: Registered all five research documents in [index.md](index.md).

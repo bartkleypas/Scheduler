@@ -1,3 +1,15 @@
+---
+type: Concept
+title: "Cybernetic Order: The Steersman's Loop"
+description: "Foundations of first-order cybernetics and its direct application to agent prompt sequencing: Identity, Perception, and Expression."
+tags:
+  - scheduler
+  - cybernetics
+  - prompt-architecture
+  - control-theory
+timestamp: "2026-09-12T16:30:00-07:00"
+---
+
 # Cybernetic Order: The Steersman's Loop
 
 ## 1. Etymology: The Rudder and the Steersman
@@ -49,7 +61,7 @@ $$\text{Identity} \longrightarrow \text{Perception} \longrightarrow \text{Expres
 ### The Three Phases
 
 1. **Identity (The Setpoint)**: Before you can steer, you must have an internal coordinate system. The steersman must know what vessel they inhabit and what heading they are committed to. Without an identity setpoint, every incoming gust of wind simply tumbles the ship.
-2. **Perception (The Sensory Filter)**: The steersman observes external reality—waves, crosswinds, drift, and telemetry. Crucially, perception requires **attentional filtering**: separating ambient spray (noise) from genuine current (signal). If you react equally to every drop of water, you capsizes the ship.
+2. **Perception (The Sensory Filter)**: The steersman observes external reality—waves, crosswinds, drift, and telemetry. Crucially, perception requires **attentional filtering**: separating ambient spray (noise) from genuine current (signal). If you react equally to every drop of water, you capsize the ship.
 3. **Expression (The Actuation Bumper)**: The steersman applies torque to the rudder. In doing so, they exert force back into the environment and conclude the control impulse, leaving an intentional wake.
 
 ---
@@ -60,9 +72,9 @@ In the late 1970s and 1980s, science fiction writers like William Gibson (*Neuro
 
 If cybernetics is the science of feedback loops between machines and living tissue, **what happens when the loop is spliced directly into the human nervous system?**
 
-- The mechanical rudder is replaced by a direct neural interface.
-- The steersman doesn't look through binoculars at the horizon; they jack into a "consensual hallucination" where sensor inputs bypass the eyes and stimulate the visual cortex directly.
-- The boundary between the observer and the system dissolves. Case sitting at his Ono-Sendai deck in Chiba City isn't "using a computer"—he is a node in an instantaneous sensory-motor feedback loop.
+* The mechanical rudder is replaced by a direct neural interface.
+* The steersman doesn't look through binoculars at the horizon; they jack into a "consensual hallucination" where sensor inputs bypass the eyes and stimulate the visual cortex directly.
+* The boundary between the observer and the system dissolves. Case sitting at his Ono-Sendai deck in Chiba City isn't "using a computer"—he is a node in an instantaneous sensory-motor feedback loop.
 
 Cyberpunk took Wiener’s steersman off the deck of the ship and wired him directly into the engine room of reality.
 
@@ -91,8 +103,8 @@ When composing the Genesis context for an agent, the instructions must obey cybe
 
 ### Why Order Matters to the Oscillator
 A transformer forward pass is an auto-regressive wave machine. When tokens are ingested in **cybernetic order**:
-- The model establishes its reference state first (**Identity**).
-- It applies sensory attenuation to incoming peripheral inputs second (**Perception**).
-- The final token instructions ringing in its attention heads before it begins generating text are its exit criteria (**Expression**).
+* The model establishes its reference state first (**Identity**).
+* It applies sensory attenuation to incoming peripheral inputs second (**Perception**).
+* The final token instructions ringing in its attention heads before it begins generating text are its exit criteria (**Expression**).
 
 You hand the steersman the compass first, teach them how to read the waves second, and tell them how to handle the rudder third.
